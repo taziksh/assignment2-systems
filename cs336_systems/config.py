@@ -43,13 +43,14 @@ class BenchmarkConfig:
     mode: Mode = "full"
     device: Literal["mps", "cuda", "cpu"] = "cuda"
     size: Literal[tuple(SIZES.keys())] = "small"
+    model: ModelConfig = field(default_factory=ModelConfig)
     optim: OptimConfig = field(default_factory=OptimConfig)
     warmup_steps: int = 5
     measure_steps: int = 10
     batch_size: int = 4
 
-    @property
-    def model(self):
-        return ModelConfig(**SIZES[self.size])
+    def __post_init__(self):
+        for k, v in SIZES[self.size].items():
+            setattr(self.model, k, v)
 
 
