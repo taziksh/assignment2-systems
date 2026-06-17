@@ -52,16 +52,19 @@ def annotated_scaled_dot_product_attention(
 cs336_basics.transformer.scaled_dot_product_attention = annotated_scaled_dot_product_attention
 
 def step(x, y, model, optim, mode, device):
-    logits = model(x)
-    logits = rearrange(logits, "b s v -> (b s) v")
-    loss = cross_entropy(logits, y)
+    with nvtx.range("forward pass"):
+        logits = model(x)
+        logits = rearrange(logits, "b s v -> (b s) v")
+        loss = cross_entropy(logits, y)
 
     if mode != "forward":
-        optim.zero_grad()
-        loss.backward()
+        with nvtx.range("backward pass"):
+            optim.zero_grad()
+            loss.backward()
 
     if mode == "full":
-        optim.step()
+        with nvtx.range("optimizer"):
+            optim.step()
 
     if device == "cuda":
         torch.cuda.synchronize()
@@ -87,16 +90,18 @@ def train(cfg):
     y = torch.randint(low=0, high=vocab_size, size=(batch_size, context_length)).to(device)
     y = rearrange(y, "b s -> (b s)")
 
-    for _ in range(warmup_steps):
-        step(x, y, model, optim, mode, device)
+    with nvtx.range("warmup"):
+        for _ in range(warmup_steps):
+            step(x, y, model, optim, mode, device)
 
 
     times = []
-    for _ in range(measure_steps):
-        start_time = timeit.default_timer()
-        step(x, y, model, optim, mode, device)
-        elapsed_time = timeit.default_timer() - start_time
-        times.append(elapsed_time)
+    with nvtx.range("measured"):
+        for _ in range(measure_steps):
+            start_time = timeit.default_timer()
+            step(x, y, model, optim, mode, device)
+            elapsed_time = timeit.default_timer() - start_time
+            times.append(elapsed_time)
 
     mean = statistics.mean(times)
     stdev = statistics.stdev(times)
