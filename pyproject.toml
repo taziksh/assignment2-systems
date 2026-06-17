@@ -17,6 +17,7 @@ dependencies = [
     "pandas>=3",
     "ty>=0.0.29",
     "ruff>=0.15.10",
+    "tyro>=1.0.13",
 ]
 
 [build-system]
