@@ -94,6 +94,9 @@ def train(cfg):
         for _ in range(warmup_steps):
             step(x, y, model, optim, mode, device)
 
+    if cfg.profile_memory:
+        # Start recording memory history
+        torch.cuda.memory._record_memory_history(max_entries=1000000)
 
     times = []
     with nvtx.range("measured"):
@@ -103,8 +106,15 @@ def train(cfg):
             elapsed_time = timeit.default_timer() - start_time
             times.append(elapsed_time)
 
+    if cfg.profile_memory:
+        # Save pickle file to load with PyTorch's online tool
+        torch.cuda.memory._dump_snapshot(f"profiles/memory_{cfg.size}_ctx{context_length}_{mode}.pickle")
+
+        # Stop recording memory history
+        torch.cuda.memory._record_memory_history(enabled=None)
+
     mean = statistics.mean(times)
-    stdev = statistics.stdev(times)
+    stdev = statistics.stdev(times) if len(times) > 1 else math.nan
     print(f"size={cfg.size} ran mode={mode.upper()} in {mean:.4f}s std={stdev}")
     return {"size": cfg.size, "mode": mode, "mean": mean, "std": stdev}
 

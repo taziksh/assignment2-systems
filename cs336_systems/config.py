@@ -42,6 +42,7 @@ SIZES = {
 class BenchmarkConfig:
     mode: Mode = "full"
     device: Literal["mps", "cuda", "cpu"] = "cuda"
+    profile_memory: bool = False
     size: Literal[tuple(SIZES.keys())] = "small"
     model: ModelConfig = field(default_factory=ModelConfig)
     optim: OptimConfig = field(default_factory=OptimConfig)
